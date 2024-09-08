@@ -1,2 +1,4 @@
 forge-std/=lib/forge-std/src/
-@delegator/=./lib/delegation-framework/
+@delegator/=lib/delegation-framework/
+@openzeppelin/=lib/openzeppelin-contracts/
+@erc7579/=lib/delegation-framework/lib/erc7579-implementation/src/
