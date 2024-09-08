@@ -1,2 +1,2 @@
 forge-std/=lib/forge-std/src/
-@delegator/=lib/delegation-framework/
+@delegator/=./lib/delegation-framework/
