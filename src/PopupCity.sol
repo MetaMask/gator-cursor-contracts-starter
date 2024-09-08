@@ -5,8 +5,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+
 import "@delegator/src/enforcers/CaveatEnforcer.sol";
 import "@delegator/src/utils/Types.sol";
+import { Delegation } from "@delegator/src/utils/Types.sol";
+
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract PopupCity is Ownable, ERC721Enumerable {
     using Counters for Counters.Counter;
@@ -28,7 +32,7 @@ contract PopupCity is Ownable, ERC721Enumerable {
         availableTickets = _availableTickets;
     }
 
-    function buyTicket(DelegationStruct calldata delegation, address ticketOwner) external onlyOwner {
+    function buyTicket(Delegation calldata delegation, address ticketOwner) external onlyOwner {
         require(availableTickets > 0, "No tickets available");
 
         // Verify and use the delegation for payment
@@ -49,13 +53,13 @@ contract PopupCity is Ownable, ERC721Enumerable {
         emit AvailableTicketsChanged(_availableTickets);
     }
 
-    function verifyDelegation(DelegationStruct calldata delegation) internal view returns (bool) {
+    function verifyDelegation(Delegation calldata delegation) internal view returns (bool) {
         // Implement delegation verification logic
         // This is a placeholder and should be replaced with actual verification
         return true;
     }
 
-    function executeDelegation(DelegationStruct calldata delegation) internal returns (bool) {
+    function executeDelegation(Delegation calldata delegation) internal returns (bool) {
         // Implement delegation execution logic for payment
         // This is a placeholder and should be replaced with actual execution
         return true;
