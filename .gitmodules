@@ -4,3 +4,7 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "lib/delegation-framework"]
+	path = lib/delegation-framework
+	url = https://github.com/MetaMask/delegation-framework
+	branch = main
