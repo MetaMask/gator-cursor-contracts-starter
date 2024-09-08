@@ -1,0 +1,407 @@
+This is a repository for getting started with the MetaMask Delegation Toolkit.
+
+## The following is pasted directly from the docs/docs/get-started/llm-intro.md file, and should be
+replaced as that file is updated.
+
+# MetaMask Delegation Toolkit LLM introduction
+
+The following text is a condensed introduction to the MetaMask Delegation Toolkit, for use in an
+LLM's limited context.
+
+Copy the following text by selecting the copy icon in the upper right corner of the text block:
+
+````markdown
+This is a software toolkit for developing applications for the Ethereum Virtual Machine (EVM) in a
+novel way, where users of the application have embedded "delegator" accounts, which are smart
+contract accounts adhering to ERC-4337. Users can sign "delegations" to other addresses, either
+granting them unconditional permissions, or creating "offers," by writing enforcement terms around
+the permission's usage.
+
+By putting the responsibility of permissions management onto the individual users' accounts, you can
+reduce the complexity of the business logic in your smart contracts, and you can express any custom
+authorization-related code as `CaveatEnforcer` contracts. Core business logic may still deal with
+ownership and transfer rights, but you can use the toolkit to express the logic around delegations,
+offers, and caveats.
+
+Additionally, any holder of a delegation message from one of these accounts can re-delegate that
+permission or offer, even with additional terms, creating an invitation link experience that can be
+used to invite new users to the system to enjoy some permissions without the need for them to have a
+pre-existing crypto account.
+
+A delegator account can be initialized "counterfactually" (without any gas, because its address is
+deterministic from the signatory's address and the salt), and can even grant delegations to other
+accounts before it's been put on-chain. The account redeeming a delegation is the one that ends up
+needing to put the delegating account on-chain (and any intermediate delegating accounts, as these
+delegations can be chained).
+
+Let's look at how you can initialize a delegator account using the MetaMask Delegation Toolkit.
+
+First, install Viem and the toolkit's modules into your project:
+
+```bash
+yarn add viem delegator-core-viem delegator-shared && yarn add viem @codefi/delegator-core-viem
+```
+
+Then, import the modules and initialize a burner account (you can back it up later):
+
+```typescript
+import { http } from "viem";
+import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
+import {
+  Implementation,
+  createDeleGatorClient,
+  PimlicoVerifyingPaymasterSponsor,
+  createBundlerClient,
+  createRootDelegation,
+  createAction,
+  type DeleGatorClient,
+  type DelegationStruct,
+  type UserOperationV07,
+  getExplorerAddressLink,
+  getExplorerTransactionLink,
+} from "delegator-core-viem";
+
+const transport = http();
+const deploySalt = 0x1n; // Can be any BigInt value.
+
+const privateKey: Hex = generatePrivateKey();
+const signatory = privateKeyToAccount(privateKey);
+
+const viemClient = createDeleGatorClient({
+  transport,
+  chain,
+  account: {
+    implementation: Implementation.Hybrid,
+    deployParams: [signatory.address, [], [], []],
+    deploySalt,
+    isDeployed: false,
+    signatory,
+  },
+});
+```
+
+## Send a user operation
+
+The following example demonstrates how to send a user operation using the toolkit:
+
+```typescript
+const userOp = await client.createUserOp(
+  data,
+  {
+    verificationGasLimit: 100000000n,
+    preVerificationGas: 100000000n,
+    callGasLimit: 100000000n,
+  }
+);
+
+const bundlerUrl = "<bundler-url>";
+const bundler = createBundlerClient(bundlerUrl);
+
+const hash = await bundler.sendUserOp(
+  userOp,
+  client.account.environment.EntryPoint,
+)
+
+const { result: receipt } = await bundler.pollForReceipt(hash);
+console.log(receipt.receipt.transactionHash);
+```
+
+:::warning
+In this example, `verificationGasLimit`, `preVerificationGas`, and `callGasLimit` are set to
+arbitrarily high values. This might result in overpayment for the user operation, and might even
+cause the bundler to reject the user operation, so we recommend replacing these values with a
+correct estimate before submitting to the bundler.
+:::
+
+## Create a delegation
+
+A delegation is an instance of `DelegationStruct`, where `delegator` is the account granting
+permission to the `delegate` account. Here's a simple example of creating a delegation without any
+caveats:
+
+```typescript
+import {
+  createRootDelegation,
+} from "delegator-core-viem";
+
+const delegatorAddress = "0x1234..."; // The address of the delegator account
+const delegateAddress = "0x5678..."; // The address of the delegate account
+
+const delegation = createRootDelegation(
+  delegateAddress,
+  delegatorAddress
+);
+```
+
+This creates a basic delegation where the `delegateAddress` is granted full permissions to act on
+behalf of the `delegatorAddress`. However, it's important to note that this delegation has no
+restrictions or caveats applied to it.
+
+## Apply caveats to a delegation
+
+While the previous example demonstrates a simple delegation, granting unrestricted access is
+generally not recommended. It's crucial to apply caveats to limit the scope of the delegated
+permissions.
+
+Caveat enforcers are solidity contracts that extend the `ICaveatEnforcer.sol` interface, and are
+passed to the delegation struct to enable fine-grained control over delegated permissions.
+
+Here's an example of how to apply a caveat to a delegation:
+
+```typescript
+import {
+  createRootDelegation,
+} from "delegator-core-viem";
+
+const delegatorAddress = "0x1234...";
+const delegateAddress = "0x5678...";
+const limitedCallsEnforcerAddress = "0x4CE4..."; // Address of the LimitedCallsEnforcer contract
+
+const caveat = {
+  enforcer: limitedCallsEnforcerAddress,
+  terms: encodeAbiParameters([{ type: "uint256" }], [2]), // Limit to 2 calls
+  args: "0x"
+};
+
+const delegation = createRootDelegation(
+  delegateAddress,
+  delegatorAddress,
+  undefined, // No specific authority
+  [caveat] // Array of caveats
+);
+```
+
+This example applies the `LimitedCallsEnforcer` caveat, which restricts the delegate to only two
+calls using this delegation. This demonstrates how caveats can be used to add specific restrictions
+to a delegation.
+
+You can apply multiple caveats to a single delegation by adding more caveat objects to the array,
+allowing for highly customizable access control.
+
+## Create a custom caveat enforcer
+
+While the MetaMask Delegation Toolkit provides several out-of-the-box caveat enforcers, you can
+create custom ones for more specific needs:
+
+1. Create a contract that extends the `ICaveatEnforcer.sol` interface.
+2. Implement the required functions, such as `beforeHook` and `afterHook`.
+
+Here's a basic example of a custom caveat enforcer:
+
+```solidity
+// This enforcer provides functionality to enforce a limit on the number of times a delegate may
+// perform transactions on behalf of the delegator.
+contract LimitedCallsEnforcer is CaveatEnforcer {
+
+  mapping(address delegationManager => mapping(bytes32 delegationHash => uint256 count)) public callCounts;
+
+  event IncreasedCount(address indexed sender, bytes32 indexed delegationHash, uint256 limit, uint256 callCount);
+ 
+  function beforeHook(
+    bytes calldata _terms, // Maximum number of times the delegate can redeem the delegation.
+    bytes calldata,
+    Action calldata,
+    bytes32 _delegationHash, // Hash of the delegation being operated on.
+    address,
+    address
+  )
+    public
+    override
+  {
+    uint256 limit_ = getTermsInfo(_terms);
+    uint256 callCounts_ = ++callCounts[msg.sender][_delegationHash];
+    require(callCounts_ <= limit_, "LimitedCallsEnforcer:limit-exceeded");
+    emit IncreasedCount(msg.sender, _delegationHash, limit_, callCounts_);
+  }
+```
+
+This example shows a `LimitedCallsEnforcer` that restricts the number of times a delegate can
+perform transactions on behalf of the delegator.
+
+## Concepts
+
+### Delegation
+
+Delegation allows an account owner (the delegator) to grant permission to another account to perform
+specific actions on their behalf. Delegations can include caveats to apply rules and restrictions.
+
+A delegation conforms to the following structure:
+
+
+```typescript
+export type DelegationStruct = {
+  delegate: Hex; // The account that receives permissions to perform actions on behalf of another account.
+  delegator: Hex; // The account that assigns the permission to another account.
+  authority: Hex; // The authority under which the delegation is made. The default is ROOT_AUTHORITY.
+  caveats: CaveatStruct[]; // An array of caveat enforcers.
+  salt: bigint; // A unique value to ensure the uniqueness of the delegation.
+  signature: Hex; // The cryptographic signature that verifies the delegation.
+};
+```
+
+### Caveat Enforcers
+
+Caveat enforcers apply specific conditions or restrictions to a delegation. The MetaMask Delegation
+Toolkit provides several out-of-the-box caveat enforcers, including:
+
+- `AllowedCalldataEnforcer.sol`
+- `AllowedMethodsEnforcer.sol`
+- `AllowedTargetsEnforcer.sol`
+- `BlockNumberEnforcer.sol`
+- `DeployedEnforcer.sol`
+- `ERC20TransferAmountEnforcer.sol`
+- `ERC20BalanceGteEnforcer.sol`
+- `NonceEnforcer.sol`
+- `LimitedCallsEnforcer.sol`
+- `IdEnforcer.sol`
+- `TimestampEnforcer.sol`
+- `ValueLteEnforcer.sol`
+
+Each of these enforcers provides specific functionality to limit and control delegated actions.
+
+## Paid delegations
+
+Sometimes you may want to require a user to pay for a delegation. You can do this by using the
+`NativePaidEnforcer` to accept that EVM chain's native token as payment for the delegation.
+
+```typescript
+// Start by initializing two clients, one for the delegator and one for the delegate.
+const createCounterfactualDelegatorClient = () => {
+  const privateKey = generatePrivateKey();
+  const owner = privateKeyToAccount(privateKey);
+
+  const viemClient = createDeleGatorClient({
+    transport: http(),
+    chain,
+    account: {
+      implementation: Implementation.Hybrid,
+      deployParams: [owner.address, [], [], []],
+      isAccountDeployed: false,
+      signatory: owner,
+      deploySalt: SALT,
+    },
+  });
+
+  return viemClient;
+};
+
+const delegatorClient = createCounterfactualDelegatorClient();
+const delegateClient = createCounterfactualDelegatorClient();
+
+// Set up payment terms
+const paymentAmount = 0.1 ether;
+const paymentTerms = PaymentTerms({ amount: paymentAmount, recipient: address(users.alice.deleGator) });
+
+// Create caveat with payment terms
+const paymentCaveat = Caveat({ 
+    enforcer: address(paidEnforcer), 
+    terms: abi.encode(paymentTerms), 
+    args: hex"" 
+});
+
+// Create delegation with payment caveat
+const delegation = createRootDelegation(
+  delegateClient.account.address,
+  delegatorClient.account.address,
+  {
+    caveats: [paymentCaveat]
+  }
+);
+
+// Sign delegation
+const signedDelegation = await delegatorClient.signDelegation(delegation);
+
+// Create action
+const action = createAction(
+    to: address(someContract),
+    value: 0,
+    data: abi.encodeWithSelector(SomeContract.someMethod.selector)
+);
+
+// Redeem delegation
+delegateClient.redeemDelegation([signedDelegation], action);
+```
+
+This example demonstrates creating a delegation with a `NativePaidEnforcer` caveat, signing it, and
+using it to execute an action. The caveat ensures that Bob pays Alice 0.1 ether when using the
+delegation.
+
+You can create your own conditional caveat enforcer using the `afterHook` function when defining a
+custom `CaveatEnforcer` contract. For example, to make sure that the delegator owns a specific NFT
+before allowing the delegation to be used (enabling any action that results in owning that NFT), you
+could do something like this:
+
+```solidity
+import { CaveatEnforcer } from "@delegator/src/enforcers/CaveatEnforcer.sol";
+import { Action } from "@delegator/src/utils/Types.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+
+contract NFTOwnershipEnforcer is CaveatEnforcer {
+  struct OwnershipTerms {
+    address nftContract;
+    uint256 tokenId;
+  }
+
+  error NotNFTOwner(address account, address nftContract, uint256 tokenId);
+
+  function beforeHook(
+    bytes calldata _terms,
+    bytes calldata,
+    Action calldata,
+    bytes32,
+    address,
+    address _redeemer
+  ) external view override returns (bool) {
+    return true;
+  }
+
+  function afterHook(
+    bytes calldata,
+    bytes calldata,
+    Action calldata,
+    bytes32,
+    address,
+    address
+  ) external pure override returns (bool) {
+    OwnershipTerms memory terms = abi.decode(_terms, (OwnershipTerms));
+    
+    IERC721 nft = IERC721(terms.nftContract);
+    if (nft.ownerOf(terms.tokenId) != _redeemer) {
+      revert NotNFTOwner(_redeemer, terms.nftContract, terms.tokenId);
+    }
+
+    return true;
+  }
+}
+```
+
+This `NFTOwnershipEnforcer` checks if the redeemer owns a specific NFT _after_ allowing the
+delegation to be used, but the action will be reverted if the `afterHook` returns `false`. It's a
+simple state lookup that doesn't modify any state.
+
+To use this enforcer, create a caveat like this:
+
+```typescript
+const nftContract = "0x1234..."; // Address of the NFT contract
+const tokenId = 123; // ID of the required NFT
+
+const caveat = {
+  enforcer: nftOwnershipEnforcerAddress,
+  terms: encodeAbiParameters(
+    [{ type: "address" }, { type: "uint256" }],
+    [nftContract, tokenId]
+  ),
+  args: "0x"
+};
+
+const delegation = createDelegation(
+  delegateAddress,
+  delegatorAddress,
+  undefined,
+  [caveat]
+);
+```
+
+This example demonstrates a minimal state lookup without modifying any state, which is simpler than
+the previous payment example.
+````
