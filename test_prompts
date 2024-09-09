@@ -1,0 +1,21 @@
+# Test Prompts
+
+The following prompts to see how our `.cursorrules` file is working under a few desirable use cases.
+
+## Popup City Tickets
+I want to make a contract that allows me to sell tickets to an upcoming event in a web of trust, where only invited people can buy tickets.
+
+## Macro Recorder
+we came up with an idea of a "macro recorder" using Delegator.
+I can think of some similar concepts from web browsers several years ago, most of which died due to changes in Chrome and Firefox Extensions: Greasemonkey and iMacros.
+Here's an example use case -- I want to record the following sequence:
+1. Approve 2 wstETH on a specific trading platform
+2. Trade 2 wstETH into WETH
+3. Approve WETH on a specific lending platform
+4. Lend WETH: Assume this is transferrable
+5. Transfer the WETH debt ownership to the delegator.
+
+This contract doesn't need a registry of macros: It trusts the solver to provide the right macro and execute it.
+Assume the user was able to define a delegation that enforces the correct outcome at the end of the macro.
+The solver only needs to be able to call a sequence of actions. These may result in the macro contract temporarily holding assets,
+but they should be returned to the user at the end of the macro.
