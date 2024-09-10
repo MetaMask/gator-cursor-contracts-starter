@@ -8,6 +8,7 @@ This guide focuses on creating smart contracts that work seamlessly with the Met
 2. **Owner-centric**: Use `onlyOwner` modifiers for privileged functions.
 3. **Delegation-agnostic**: Contracts should not reference Delegation, DelegationManager, or mode encoding.
 4. **Extensibility**: Design core functions to be easily extended through the delegation framework.
+5. **Pricing and Payments**: Never include pricing, purchase, or payment logic directly in the contract. These should always be handled through delegations, assuming the owner can issue for free.
 
 ## Contract Structure
 
@@ -39,18 +40,17 @@ The `mint` function is a simple example of a core function that can be easily ex
 
 Caveat enforcers allow you to add specific conditions or restrictions to delegations. The MetaMask Delegation Toolkit provides several out-of-the-box caveat enforcers:
 
-- `AllowedCalldataEnforcer.sol`
-- `AllowedMethodsEnforcer.sol`
-- `AllowedTargetsEnforcer.sol`
-- `BlockNumberEnforcer.sol`
-- `DeployedEnforcer.sol`
-- `ERC20TransferAmountEnforcer.sol`
-- `ERC20BalanceGteEnforcer.sol`
-- `NonceEnforcer.sol`
-- `LimitedCallsEnforcer.sol`
-- `IdEnforcer.sol`
-- `TimestampEnforcer.sol`
-- `ValueLteEnforcer.sol`
+- `AllowedCalldataEnforcer.sol`: Allows restricting a range of call data to a specific value.
+- `AllowedMethodsEnforcer.sol`: Allows restricting a range of call data to a specific method ID.
+- `AllowedTargetsEnforcer.sol`: Allows restricting a call to a specific target address.
+- `BlockNumberEnforcer.sol`: Allows specifying a valid block number range for a delegation.
+- `DeployedEnforcer.sol`: Allows ensuring a CREATE2 contract is published before the delegation is used.
+- `ERC20TransferAmountEnforcer.sol`: Allows specifying a maximum transfer amount for a delegation.
+- `ERC20BalanceGteEnforcer.sol`: Allows specifying a minimum balance for a delegation.
+- `NonceEnforcer.sol`: Allows reversible revocation, by defining a nonce that must be set to a matching value for the delegation to be valid.
+- `LimitedCallsEnforcer.sol`: Allows limiting the number of times a delegation can be used.
+- `TimestampEnforcer.sol`: Allows specifying a valid time range for a delegation.
+- `ValueLteEnforcer.sol`: Allows specifying a maximum value for a delegation to transfer.
 
 So any policy that is composed of those can be assumed provided already.
 
