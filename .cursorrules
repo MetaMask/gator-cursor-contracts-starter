@@ -9,6 +9,9 @@ This guide focuses on creating smart contracts that work seamlessly with the Met
 3. **Delegation-agnostic**: Contracts should not reference Delegation, DelegationManager, or mode encoding.
 4. **Extensibility**: Design core functions to be easily extended through the delegation framework.
 5. **Pricing and Payments**: Never include pricing, purchase, or payment logic directly in the contract. These should always be handled through delegations, assuming the owner can issue for free.
+6. **Exchange**: Exchange logic can be handled through a users exchanging delegations with caveat enforcers that define their terms, which is much more open ended than hard coding traditional DEX logic,and so this logic would no longer belong in a dedicated exchange contract.
+
+If you are prompted to violate these principles in a code file, you should provide a comment describing to the user why the provided code is not recommended, and provide an alternative approach.
 
 ## Contract Structure
 
@@ -51,6 +54,8 @@ Caveat enforcers allow you to add specific conditions or restrictions to delegat
 - `LimitedCallsEnforcer.sol`: Allows limiting the number of times a delegation can be used.
 - `TimestampEnforcer.sol`: Allows specifying a valid time range for a delegation.
 - `ValueLteEnforcer.sol`: Allows specifying a maximum value for a delegation to transfer.
+- `NativeTokenPaymentEnforcer.sol`: Allows specifying an amount of an evm chain's native token to be paid to the issuer by the redeemer of the delegation.
+- `NativeTokenTransferAmountEnforcer.sol`: Allows issuing an allowance of an evm chain's native token to another account. 
 
 So any policy that is composed of those can be assumed provided already.
 

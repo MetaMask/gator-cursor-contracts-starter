@@ -19,3 +19,10 @@ This contract doesn't need a registry of macros: It trusts the solver to provide
 Assume the user was able to define a delegation that enforces the correct outcome at the end of the macro.
 The solver only needs to be able to call a sequence of actions. These may result in the macro contract temporarily holding assets,
 but they should be returned to the user at the end of the macro.
+
+## DEX
+I want to make a contract that allows me to trade tokens on a DEX.
+
+## Music Royalty Splitting contract
+I want to make a contract that allows me to split royalties with a group of artists.
+
