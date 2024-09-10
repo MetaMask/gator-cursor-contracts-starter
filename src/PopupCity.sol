@@ -4,41 +4,42 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract EventTickets is ERC721, Ownable {
-    uint256 public constant MAX_TICKETS = 1000;
-    uint256 public ticketPrice;
-    uint256 public ticketsMinted;
+contract PopupCity is ERC721, Ownable {
+    uint256 private _nextTokenId;
+    uint256 public constant MAX_SUPPLY = 1000;
 
-    constructor(string memory name, string memory symbol, uint256 _ticketPrice) 
-        ERC721(name, symbol) 
-        Ownable(msg.sender) 
-    {
-        ticketPrice = _ticketPrice;
+    constructor() ERC721("PopupCity", "POP") Ownable(msg.sender) {}
+
+    // Mint function for ticket creation
+    // Recommended delegation: AllowedMethodsEnforcer to restrict to this function
+    // Additional enforcer: LimitedCallsEnforcer to limit number of tickets per invitee
+    function mint(address to) public onlyOwner {
+        require(_nextTokenId < MAX_SUPPLY, "Max supply reached");
+        uint256 tokenId = _nextTokenId++;
+        _safeMint(to, tokenId);
     }
 
-    // Mint a ticket for a specific address
-    // Recommended delegation: Use AllowedCalldataEnforcer to restrict who can receive tickets
-    // Combined with ERC20TransferAmountEnforcer to ensure proper payment
-    function mintTicket(address to) external onlyOwner {
-        require(ticketsMinted < MAX_TICKETS, "All tickets have been minted");
-        uint256 newTokenId = ticketsMinted + 1;
-        _safeMint(to, newTokenId);
-        ticketsMinted++;
+    // Function to check ticket validity
+    function isValidTicket(uint256 tokenId) public view returns (bool) {
+        return _exists(tokenId);
     }
 
-    // Update ticket price
-    // Recommended delegation: Use ValueLteEnforcer to limit the maximum price
-    function setTicketPrice(uint256 _newPrice) external onlyOwner {
-        ticketPrice = _newPrice;
+    // Owner can set base URI for metadata
+    // Recommended delegation: AllowedMethodsEnforcer to restrict to this function
+    function setBaseURI(string memory baseURI) public onlyOwner {
+        _setBaseURI(baseURI);
     }
 
-    // Withdraw funds from ticket sales
-    // Recommended delegation: Use ERC20TransferAmountEnforcer to limit withdrawal amounts
-    function withdrawFunds() external onlyOwner {
-        uint256 balance = address(this).balance;
-        payable(owner()).transfer(balance);
+    // Internal function to set base URI
+    function _setBaseURI(string memory baseURI) internal {
+        _baseURI = baseURI;
     }
 
-    // Allow contract to receive ETH
-    receive() external payable {}
+    // Override base URI function
+    function _baseURI() internal view virtual override returns (string memory) {
+        return _baseURI;
+    }
+
+    string private _baseURI;
 }
+
