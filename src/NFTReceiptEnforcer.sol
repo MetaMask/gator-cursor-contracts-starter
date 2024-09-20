@@ -2,50 +2,44 @@
 pragma solidity ^0.8.0;
 
 import { CaveatEnforcer } from "@delegator/src/enforcers/CaveatEnforcer.sol";
-import { Action } from "@delegator/src/utils/Types.sol";
+import { ModeCode } from "@delegator/src/utils/Types.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract NFTReceiptEnforcer is CaveatEnforcer {
-    struct NFTReceipt {
+    struct NFTReceiptTerms {
         address nftContract;
+        address recipient;
         uint256 tokenId;
-        address intendedRecipient;
     }
 
-    error NFTNotReceived(address account, address nftContract, uint256 tokenId);
-    error UnauthorizedRecipient(address actual, address intended);
+    error NFTNotReceived(address recipient, address nftContract, uint256 tokenId);
 
     function beforeHook(
-        bytes calldata _terms,
         bytes calldata,
-        Action calldata,
+        bytes calldata,
+        ModeCode,
+        bytes calldata,
         bytes32,
         address,
-        address _redeemer
-    ) external view override returns (bool) {
-        NFTReceipt memory receipt = abi.decode(_terms, (NFTReceipt));
-        if (_redeemer != receipt.intendedRecipient) {
-            revert UnauthorizedRecipient(_redeemer, receipt.intendedRecipient);
-        }
-        return true;
+        address
+    ) external pure override {
+        // No pre-execution checks needed
     }
 
     function afterHook(
         bytes calldata _terms,
         bytes calldata,
-        Action calldata,
+        ModeCode,
+        bytes calldata,
         bytes32,
         address,
-        address _redeemer
-    ) external view override returns (bool) {
-        NFTReceipt memory receipt = abi.decode(_terms, (NFTReceipt));
+        address
+    ) external view override {
+        NFTReceiptTerms memory terms = abi.decode(_terms, (NFTReceiptTerms));
         
-        IERC721 nft = IERC721(receipt.nftContract);
-        if (nft.ownerOf(receipt.tokenId) != _redeemer) {
-            revert NFTNotReceived(_redeemer, receipt.nftContract, receipt.tokenId);
+        IERC721 nft = IERC721(terms.nftContract);
+        if (nft.ownerOf(terms.tokenId) != terms.recipient) {
+            revert NFTNotReceived(terms.recipient, terms.nftContract, terms.tokenId);
         }
-
-        return true;
     }
 }
-

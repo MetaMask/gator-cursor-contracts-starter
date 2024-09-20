@@ -5,6 +5,14 @@ The following prompts to see how our `.cursorrules` file is working under a few 
 ## Popup City Tickets
 I want to make a contract that allows me to sell tickets to an upcoming event in a web of trust, where only invited people can buy tickets.
 
+## Popup City Sale v2
+Let's make a PopupCity sale contract.
+
+The contract will be defined as a ERC721 contract and will be owned by its creator.
+It will also be initialized with a funding target and a token to accept funding in.
+
+A public function `closeSale(address[] recipients)` will require that this contract owns over the funding target of the target tokens, and will mint NFTs to the specified recipients.
+
 ## Macro Recorder
 we came up with an idea of a "macro recorder" using Delegator.
 I can think of some similar concepts from web browsers several years ago, most of which died due to changes in Chrome and Firefox Extensions: Greasemonkey and iMacros.
