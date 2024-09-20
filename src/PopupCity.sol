@@ -50,15 +50,4 @@ contract PopupCity is ERC721, Ownable {
         return fundingToken.balanceOf(address(this));
     }
 
-    // Function to update funding target if needed
-    // Recommended delegation: Allow trusted advisors to adjust target based on market conditions
-    function updateFundingTarget(uint256 newTarget) public onlyOwner {
-        fundingTarget = newTarget;
-    }
-
-    // Function to withdraw funds after sale closure
-    // Recommended delegation: Allow financial team to manage funds post-sale
-    function withdrawFunds(address to, uint256 amount) public onlyOwner {
-        require(fundingToken.transfer(to, amount), "Transfer failed");
-    }
 }
