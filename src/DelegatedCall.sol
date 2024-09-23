@@ -5,6 +5,29 @@ import "@erc7579/lib/ModeLib.sol";
 import "@erc7579/lib/ExecutionLib.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
+/**
+ * @notice This library provides a convenient way to call delegation managers
+ * as demonstrated in PopupCity.sol.
+ * 
+ * It simplifies the process of redeeming delegations by encapsulating the
+ * complex call structure required by the ERC-7710 standard. This allows
+ * contracts like PopupCity to easily execute delegated calls, such as
+ * transferring tokens or minting NFTs, based on user-provided delegations.
+ * 
+ * Usage example from PopupCity.sol:
+ * DelegatedCall.call(
+ *     contexts[i],
+ *     address(fundingToken),
+ *     0,
+ *     abi.encodeWithSelector(IERC20.transferFrom.selector, recipients[i], address(this), closingPrice)
+ * );
+ * 
+ * This approach enhances flexibility and security by leveraging the
+ * delegation framework for complex operations like closing a sale or
+ * transferring ownership.
+ */
+
+
 struct DelegatedContext {
     address delegationManager;
     bytes permissionContext;
